@@ -12,27 +12,42 @@ from skimage import color as cl
 from skimage.util import view_as_blocks
 from skimage.transform import resize
 from sklearn import mixture
+from numba import jit
 
 #=================================================
-def getHists(x):
-    hists = []
-    for i in range(3):
-        hists.append(np.histogram(x[:,:,i],bins=50, density = True))
+@jit
+def getHists(img,bins=50):
+    """Generate histogram containing <bins> amount of bins. 
+    
+    i-th value represents density of pixels with values contained in i-th bin
+    """
+    hists = np.array([])
+    for i in range(3):#Images are loaded as three-dimensional matrices with three channels
+        hists = np.append(hists,np.histogram(img[:,:,i], bins, density = True)[0])
     return hists
-def genHistArrays(df,csname):
-    allpixV = np.zeros((df.shape[0],150))
-    hists = df['SKImage'].apply(getHists)
-    colrang = range(1,np.size(hists[0][0][1]))
+
+def genHistArrays(df,csname,bins=50):
+    """Create pixels' color histograms for every row in df
+    
+    df - input dataframe
+    csname - color space (RGB, HSV, CIE or YdBdR)
+    bins - specifies how many bins should be in histogram for each color channel
+    """
+    #initiate matrix which will contain values of histograms
+    allpixV = np.zeros((df.shape[0],bins*3))
+    #attain histograms
+    hists = df['SKImage'].apply(lambda x: getHists(x,bins))
+    
+    #Generate column names for result dataframe
     fullnames = []
     for chs in ['CH1', 'CH2', 'CH3']:
-        fullnames.extend([chs+'-'+str(j) for j in colrang])
+        fullnames.extend([chs+'-'+str(j) for j in range(bins)])
     fullnames = [csname+'-'+str(j) for j in fullnames]
-    for rowi, pArr in enumerate(hists):
-        pixVals = pArr[0][0]
-        pixVals = np.append(pixVals,pArr[1][0])
-        pixVals = np.append(pixVals,pArr[2][0])
-        allpixV[rowi,:] = pixVals
-        pixVals = None
+    
+    #extract histograms
+    for rowi, histArr in enumerate(hists):
+        allpixV[rowi,:] = np.array(histArr).flatten()
+        
     return allpixV,fullnames
 #=================================================
 def blocksForImg(img,samplsiz,resc):
@@ -65,11 +80,15 @@ def blocksVals(df,ssiz,resc,cspacename='RGB'):
         blockArr[i,:] = bl
     return blockArr,labelnames
 #=================================================
+    
+@jit
 def runGMM(Xseg,n_kernels):
     gmm = mixture.GaussianMixture(n_components=n_kernels, covariance_type='full')
     gmm.fit(Xseg)
     labels = gmm.predict(Xseg)
     return labels
+
+@jit
 def prepareImg2GaussM(img):
     imgforSeg = np.zeros((img.shape[0]*img.shape[1],5))
     for i in range(img.shape[0]):
@@ -78,6 +97,7 @@ def prepareImg2GaussM(img):
     Xseg = np.array(imgforSeg)
     return Xseg
 
+@jit
 def getClustersInfo(img,Xseg,labels,n_kernels):
     labsDat = pd.DataFrame(data = Xseg)
     labsDat['label'] = labels
@@ -97,20 +117,22 @@ def getClustersInfo(img,Xseg,labels,n_kernels):
     return centrDataArr
 
 def prepareLabels(n_kernels,cspace):
-    cantrDataLabels = []
+    centrDataLabels = []
     for i in range(n_kernels):
         for s in ['sortCH1','sortCH2','sortCH3','sortX','sortY','sortSize']:
-            cantrDataLabels = np.append(
-                cantrDataLabels, ['Cluster: ' + str(i)+' cspace: ' + cspace + '; ' + s + '; ' + var for var in
+            centrDataLabels = np.append(
+                centrDataLabels, ['Cluster: ' + str(i)+' cspace: ' + cspace + '; ' + s + '; ' + var for var in
                              ['CH1', 'CH2', 'CH3', 'X', 'Y', 'SIZE']])
-    return cantrDataLabels
+    return centrDataLabels
 
+@jit
 def processImageGM(img, n_kernels, scale_factor = 1):
     if scale_factor != 1:
         img = resize(img,(int(img.shape[0]/scale_factor),int(img.shape[1]/scale_factor),3))
     data2seg = prepareImg2GaussM(img)
     labels = runGMM(data2seg,n_kernels)
     return getClustersInfo(img,data2seg,labels,n_kernels)
+
 def getSegmentInfo(df,cspace,n_kernels, scale_factor = 1):
     colNames = prepareLabels(n_kernels,cspace)
     tqdm.pandas(ncols=50)
@@ -120,12 +142,12 @@ def getSegmentInfo(df,cspace,n_kernels, scale_factor = 1):
         segArr[i,:] = seg
     return segArr,colNames
 
+@jit
 def addRawPixValsImg(img,new_width=32,new_height=32):
     img = resize(img,(new_width,new_height,3))
-    print(img.flatten())
     return img.flatten()
+
 def addRawPixValsImgDf(df,cspace,new_width=32,new_height=32):
-    print(cspace)
     rawPixLabels = ['RawPix_' + cspace + str(i) for i in range(new_width*new_height*3)]
     rawPxDF = df['SKImage'].apply(lambda x: addRawPixValsImg(x,new_width,new_height))
     rawPicsVects = np.zeros((df.shape[0],np.size(rawPixLabels)))
@@ -133,29 +155,25 @@ def addRawPixValsImgDf(df,cspace,new_width=32,new_height=32):
         rawPicsVects[i,:] = flatIms
     return rawPicsVects,rawPixLabels
 #=================================================
-def describeImgs(df,cspace,blocksResiz=160,blocksblSiz=20,n_clusters=5,clustResiz=3,
+    
+def describeImgs(df,cspace,bins=50,blocksResiz=160,blocksblSiz=20,n_clusters=5,clustResiz=3,
                  new_width=32,new_height=32):
-    histV,histCols = genHistArrays(df,cspace)
+    histV,histCols = genHistArrays(df,cspace,bins)
     histDF = pd.DataFrame(data = histV, columns = histCols)
     blocksV, blocksCols = blocksVals(df,blocksblSiz,blocksResiz, cspace)
     blocksDF = pd.DataFrame(data = blocksV, columns = blocksCols)
     segV, segCols = getSegmentInfo(df,cspace,n_clusters, clustResiz)
     segDF = pd.DataFrame(data = segV, columns = segCols)
     rawPicsV, rawPixCols = addRawPixValsImgDf(df,cspace,new_width,new_height)
-    print('rawVec')
-    print(rawPicsV)
     rawPicsDF = pd.DataFrame(data = rawPicsV, columns = rawPixCols)
-    print('rawP')
-    print(rawPicsDF)
     return pd.concat([histDF,blocksDF,segDF,rawPicsDF], axis=1)
-def extractVarsForML(df,blocksResiz=160,blocksblSiz=20,n_clusters=5,clustResiz=3,new_width=32,new_height=32):
-    resDF = describeImgs(df,'RGB',blocksResiz,blocksblSiz,n_clusters,clustResiz,
+
+def extractVarsForML(df,bins=50,blocksResiz=160,blocksblSiz=20,n_clusters=5,clustResiz=3,new_width=32,new_height=32):
+    resDF = describeImgs(df,'RGB',bins,blocksResiz,blocksblSiz,n_clusters,clustResiz,
                          new_width,new_height)
     cspdict = {'HSV': cl.rgb2hsv, 'CIE': cl.rgb2rgbcie, 'YDBDR': cl.rgb2ydbdr}
     for csp, colFunc in cspdict.items():
         df['SKImage'] = df['SKImage'].apply(colFunc)
-        resDF = pd.concat([resDF, describeImgs(df,csp,blocksResiz,blocksblSiz,n_clusters,clustResiz,
+        resDF = pd.concat([resDF, describeImgs(df,csp,bins,blocksResiz,blocksblSiz,n_clusters,clustResiz,
                                                new_width,new_height)], axis=1)
-    print('res')
-    print(resDF)
     return resDF
