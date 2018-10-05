@@ -1,0 +1,58 @@
+name: foodmlenv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pydispatcher=2.0.5=py36_0
+  - _ipyw_jlab_nb_ext_conf=0.1.0=py36_0
+  - _tflow_190_select=0.0.2=eigen
+  - beautifulsoup4=4.6.3=py36_0
+  - conda=4.5.10=py36_0
+  - conda-build=3.12.1=py36_0
+  - conda-env=2.6.0=1
+  - conda-verify=3.1.0=py36_0
+  - docutils=0.14=py36h6012d8f_0
+  - h5py=2.8.0=py36h3bdd7fb_1
+  - hdf5=1.10.2=hac2f561_1
+  - imageio=2.3.0=py36_0
+  - imagesize=1.0.0=py36_0
+  - jupyter=1.0.0=py36_5
+  - jupyter_client=5.2.3=py36_0
+  - jupyter_console=5.2.0=py36_1
+  - jupyter_core=4.4.0=py36_0
+  - jupyterlab=0.33.11=py36_0
+  - jupyterlab_launcher=0.11.2=py36_0
+  - keras=2.2.2=0
+  - keras-applications=1.0.4=py36_0
+  - keras-base=2.2.2=py36_0
+  - keras-preprocessing=1.0.2=py36_0
+  - markdown=2.6.11=py36_0
+  - matplotlib=2.2.3=py36hd159220_0
+  - numpy=1.15.0=py36h9fa60d3_0
+  - numpy-base=1.15.0=py36h4a99626_0
+  - numpydoc=0.8.0=py36_0
+  - pandas=0.23.4=py36h830ac7b_0
+  - pep8=1.7.1=py36_0
+  - pickleshare=0.7.4=py36h9de030f_0
+  - pillow=5.2.0=py36h08bbbbd_0
+  - pip=10.0.1=py36_0
+  - scikit-image=0.14.0=py36h6538335_1
+  - scikit-learn=0.19.1=py36hae9bb9f_0
+  - scipy=1.1.0=py36h672f292_0
+  - scrapy=1.5.1=py36_0
+  - seaborn=0.9.0=py36_0
+  - spyder=3.3.1=py36_1
+  - spyder-kernels=0.2.6=py36_0
+  - tensorboard=1.9.0=py36he025d50_0
+  - tensorflow=1.9.0=eigen_py36h0b764b7_1
+  - tensorflow-base=1.9.0=eigen_py36h45df0d8_0
+  - win_inet_pton=1.0.1=py36_1
+  - win_unicode_console=0.5=py36hcdbd4b5_0
+  - pip:
+    - dill==0.2.8.2
+    - imageai==2.0.2
+    - jupyterthemes==0.19.1
+    - opencv-python==3.4.2.17
+    - selenium==3.12.0
+prefix: C:\Users\AdamT\Anaconda3
+
