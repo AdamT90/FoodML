@@ -9,7 +9,7 @@ More information about project can be found in file:
         FoodML/doc/Report.ipynb
       
       
-
+# References
 [1] http://www.site.uottawa.ca/~shervin/food/ "FooDD Database" <a name="foodd"></a>
 
 [2] https://github.com/Liang-yc/ECUSTFD-resized- "EcustFD Database" <a name="ecustfd"></a>
